@@ -47,7 +47,7 @@ jobs:
               run: |
                   set -euo pipefail
                   test -f wear/src/main/AndroidManifest.xml
-                  test -f wear/src/main/res/drawable/relayid.png
+                  test -f wear/src/main/res/drawable-nodpi/relayid.png
                   ! find . -type f \( -name '*.jks' -o -name '*.keystore' \) -print -quit | grep -q .
                   git diff --check
 
