@@ -1,0 +1,115 @@
+name: Wear OS CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: wear-ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    check:
+        runs-on: ubuntu-24.04
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
+
+            - name: Set up Java
+              uses: actions/setup-java@v6
+              with:
+                  distribution: temurin
+                  java-version: '17'
+
+            - name: Set up Gradle
+              uses: gradle/actions/setup-gradle@v4
+              with:
+                  gradle-version: '8.13'
+
+            - name: Set up Android SDK
+              uses: android-actions/setup-android@v3
+
+            - name: Install Android build tools
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+            - name: Verify source tree
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  test -f wear/src/main/AndroidManifest.xml
+                  test -f wear/src/main/res/drawable/relayid.png
+                  ! find . -type f \( -name '*.jks' -o -name '*.keystore' \) -print -quit | grep -q .
+                  git diff --check
+
+            - name: Compile debug APK
+              run: gradle :wear:assembleDebug --no-daemon --stacktrace
+
+    wear-prerelease:
+        needs: check
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
+
+            - name: Set up Java
+              uses: actions/setup-java@v6
+              with:
+                  distribution: temurin
+                  java-version: '17'
+
+            - name: Set up Gradle
+              uses: gradle/actions/setup-gradle@v4
+              with:
+                  gradle-version: '8.13'
+
+            - name: Set up Android SDK
+              uses: android-actions/setup-android@v3
+
+            - name: Install Android build tools
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+            - name: Build release APK
+              run: gradle :wear:assembleRelease --no-daemon --stacktrace
+
+            - name: Name release APK
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  apk_path="$(find wear/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
+                  test -n "$apk_path"
+                  cp "$apk_path" relayid-wear.apk
+
+            - name: Upload APK artifact
+              uses: actions/upload-artifact@v5
+              with:
+                  name: relayid-wear
+                  path: relayid-wear.apk
+                  if-no-files-found: error
+
+            - name: Publish rolling prerelease
+              if: github.event_name != 'pull_request'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  if gh release view wear-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                      gh release edit wear-latest --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Latest RelayId Wear OS' --prerelease --latest
+                  else
+                      gh release create wear-latest --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Latest RelayId Wear OS' --prerelease --latest
+                  fi
+                  gh release delete-asset wear-latest relayid-wear.apk --repo "$GITHUB_REPOSITORY" --yes >/dev/null 2>&1 || true
+                  gh release upload wear-latest relayid-wear.apk --repo "$GITHUB_REPOSITORY" --clobber
