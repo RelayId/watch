@@ -106,25 +106,35 @@ jobs:
                       echo "RELAYID_REQUIRE_SIGNING=true"
                   } >> "$GITHUB_ENV"
 
-            - name: Build release APK
-              run: gradle :wear:assembleRelease --no-daemon --stacktrace
+            - name: Build release APK and AAB
+              run: gradle :wear:assembleRelease :wear:bundleRelease --no-daemon --stacktrace
               env:
                   RELAYID_REQUIRE_SIGNING: true
                   CXXFLAGS: -Wno-deprecated-declarations -Wno-overloaded-virtual
 
-            - name: Name release APK
+            - name: Name release APK and AAB
               shell: bash
               run: |
                   set -euo pipefail
+                  version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -n1)"
+                  version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' wear/build.gradle.kts | head -n1)"
+                  base="relayid-wear-v${version_name}-${version_code}"
                   apk_path="$(find wear/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
                   test -n "$apk_path"
                   cp "$apk_path" relayid-wear.apk
+                  cp "$apk_path" "${base}.apk"
+                  aab_path="$(find wear/build/outputs/bundle/release -maxdepth 1 -type f -name '*.aab' -print -quit)"
+                  test -n "$aab_path"
+                  cp "$aab_path" "${base}.aab"
 
             - name: Upload APK artifact
               uses: actions/upload-artifact@v5
               with:
-                  name: relayid-wear
-                  path: relayid-wear.apk
+                  name: relayid-wear-release
+                  path: |
+                      relayid-wear.apk
+                      relayid-wear-v*.apk
+                      relayid-wear-v*.aab
                   if-no-files-found: error
 
             - name: Publish rolling prerelease
@@ -140,7 +150,10 @@ jobs:
                       gh release create wear-latest --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Latest RelayId Wear OS' --prerelease --latest
                   fi
                   gh release delete-asset wear-latest relayid-wear.apk --repo "$GITHUB_REPOSITORY" --yes >/dev/null 2>&1 || true
-                  gh release upload wear-latest relayid-wear.apk --repo "$GITHUB_REPOSITORY" --clobber
+                  for asset in relayid-wear.apk relayid-wear-v*.apk relayid-wear-v*.aab; do
+                      gh release delete-asset wear-latest "$(basename "$asset")" --repo "$GITHUB_REPOSITORY" --yes >/dev/null 2>&1 || true
+                  done
+                  gh release upload wear-latest relayid-wear.apk relayid-wear-v*.apk relayid-wear-v*.aab --repo "$GITHUB_REPOSITORY" --clobber
 
             - name: Publish update manifest metadata
               if: github.event_name != 'pull_request' && env.MANIFEST_DISPATCH_TOKEN != ''
