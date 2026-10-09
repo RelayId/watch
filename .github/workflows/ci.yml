@@ -85,8 +85,32 @@ jobs:
                   set -euo pipefail
                   sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
+            - name: Configure release signing
+              if: github.event_name != 'pull_request'
+              shell: bash
+              env:
+                  KEYSTORE_BASE64: ${{ secrets.RELAYID_ANDROID_KEYSTORE_BASE64 }}
+                  KEYSTORE_PASSWORD: ${{ secrets.RELAYID_ANDROID_KEYSTORE_PASSWORD }}
+                  KEY_ALIAS: ${{ secrets.RELAYID_ANDROID_KEY_ALIAS }}
+                  KEY_PASSWORD: ${{ secrets.RELAYID_ANDROID_KEY_PASSWORD }}
+              run: |
+                  set -euo pipefail
+                  test -n "$KEYSTORE_BASE64" -a -n "$KEYSTORE_PASSWORD" -a -n "$KEY_ALIAS" -a -n "$KEY_PASSWORD"
+                  mkdir -p .secrets
+                  printf '%s' "$KEYSTORE_BASE64" | base64 --decode > .secrets/relayid-watch.keystore
+                  {
+                      echo "RELAYID_ANDROID_KEYSTORE_PATH=$GITHUB_WORKSPACE/.secrets/relayid-watch.keystore"
+                      echo "RELAYID_ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+                      echo "RELAYID_ANDROID_KEY_ALIAS=$KEY_ALIAS"
+                      echo "RELAYID_ANDROID_KEY_PASSWORD=$KEY_PASSWORD"
+                      echo "RELAYID_REQUIRE_SIGNING=true"
+                  } >> "$GITHUB_ENV"
+
             - name: Build release APK
               run: gradle :wear:assembleRelease --no-daemon --stacktrace
+              env:
+                  RELAYID_REQUIRE_SIGNING: true
+                  CXXFLAGS: -Wno-deprecated-declarations -Wno-overloaded-virtual
 
             - name: Name release APK
               shell: bash
@@ -117,3 +141,24 @@ jobs:
                   fi
                   gh release delete-asset wear-latest relayid-wear.apk --repo "$GITHUB_REPOSITORY" --yes >/dev/null 2>&1 || true
                   gh release upload wear-latest relayid-wear.apk --repo "$GITHUB_REPOSITORY" --clobber
+
+            - name: Publish update manifest metadata
+              if: github.event_name != 'pull_request' && env.MANIFEST_DISPATCH_TOKEN != ''
+              env:
+                  GH_TOKEN: ${{ secrets.MANIFEST_DISPATCH_TOKEN }}
+                  MANIFEST_DISPATCH_TOKEN: ${{ secrets.MANIFEST_DISPATCH_TOKEN }}
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -n1)"
+                  version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' wear/build.gradle.kts | head -n1)"
+                  digest="$(sha256sum relayid-wear.apk | cut -d ' ' -f1)"
+                  jq -n \
+                    --arg package 'com.relayid.watch' \
+                    --arg versionName "$version_name" \
+                    --argjson versionCode "$version_code" \
+                    --arg downloadUrl 'https://relayid.github.io/manifest/wear/' \
+                    --arg artifactUrl 'https://github.com/RelayId/watch/releases/download/wear-latest/relayid-wear.apk' \
+                    --arg sha256 "$digest" \
+                    '{event_type:"publish-wear",client_payload:{package:$package,versionName:$versionName,versionCode:$versionCode,downloadUrl:$downloadUrl,artifactUrl:$artifactUrl,sha256:$sha256}}' |
+                    gh api repos/RelayId/manifest/dispatches --input -

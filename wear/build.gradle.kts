@@ -13,7 +13,33 @@ android {
         minSdk = 30
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
+    }
+
+    val releaseKeystorePath = System.getenv("RELAYID_ANDROID_KEYSTORE_PATH")
+    val releaseKeystorePassword = System.getenv("RELAYID_ANDROID_KEYSTORE_PASSWORD")
+    val releaseKeyAlias = System.getenv("RELAYID_ANDROID_KEY_ALIAS")
+    val releaseKeyPassword = System.getenv("RELAYID_ANDROID_KEY_PASSWORD")
+    val releaseSigningConfigured = listOf(
+        releaseKeystorePath,
+        releaseKeystorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
+
+    if (System.getenv("RELAYID_REQUIRE_SIGNING") == "true" && !releaseSigningConfigured) {
+        error("RelayId release signing requires the Android keystore environment variables.")
+    }
+
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     compileOptions {
@@ -28,6 +54,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (releaseSigningConfigured) signingConfig = signingConfigs.getByName("release")
         }
     }
 
