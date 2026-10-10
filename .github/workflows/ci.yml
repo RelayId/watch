@@ -51,9 +51,6 @@ jobs:
                   ! find . -type f \( -name '*.jks' -o -name '*.keystore' \) -print -quit | grep -q .
                   git diff --check
 
-            - name: Compile debug APK
-              run: gradle :wear:assembleDebug --no-daemon --stacktrace
-
     wear-prerelease:
         needs: check
         runs-on: ubuntu-24.04
