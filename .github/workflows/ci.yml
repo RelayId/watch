@@ -122,19 +122,17 @@ jobs:
                   apk_path="$(find wear/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
                   test -n "$apk_path"
                   cp "$apk_path" relayid-wear.apk
-                  cp "$apk_path" "${base}.apk"
                   aab_path="$(find wear/build/outputs/bundle/release -maxdepth 1 -type f -name '*.aab' -print -quit)"
                   test -n "$aab_path"
-                  cp "$aab_path" "${base}.aab"
+                  cp "$aab_path" relayid-wear.aab
 
-            - name: Upload APK artifact
+            - name: Upload Wear APK and AAB artifacts
               uses: actions/upload-artifact@v5
               with:
                   name: relayid-wear-release
                   path: |
                       relayid-wear.apk
-                      relayid-wear-v*.apk
-                      relayid-wear-v*.aab
+                      relayid-wear.aab
                   if-no-files-found: error
 
             - name: Publish rolling prerelease
@@ -149,11 +147,10 @@ jobs:
                   else
                       gh release create wear-latest --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title 'Latest RelayId Wear OS' --prerelease --latest
                   fi
-                  gh release delete-asset wear-latest relayid-wear.apk --repo "$GITHUB_REPOSITORY" --yes >/dev/null 2>&1 || true
-                  for asset in relayid-wear.apk relayid-wear-v*.apk relayid-wear-v*.aab; do
-                      gh release delete-asset wear-latest "$(basename "$asset")" --repo "$GITHUB_REPOSITORY" --yes >/dev/null 2>&1 || true
-                  done
-                  gh release upload wear-latest relayid-wear.apk relayid-wear-v*.apk relayid-wear-v*.aab --repo "$GITHUB_REPOSITORY" --clobber
+                  while IFS= read -r asset; do
+                      gh release delete-asset wear-latest "$asset" --repo "$GITHUB_REPOSITORY" --yes >/dev/null 2>&1 || true
+                  done < <(gh release view wear-latest --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep '^relayid-wear' || true)
+                  gh release upload wear-latest relayid-wear.apk relayid-wear.aab --repo "$GITHUB_REPOSITORY" --clobber
 
             - name: Publish update manifest metadata
               if: github.event_name != 'pull_request' && env.MANIFEST_DISPATCH_TOKEN != ''
@@ -166,8 +163,7 @@ jobs:
                   version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -n1)"
                   version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' wear/build.gradle.kts | head -n1)"
                   digest="$(sha256sum relayid-wear.apk | cut -d ' ' -f1)"
-                  aab_digest="$(sha256sum relayid-wear-v${version_name}-${version_code}.aab | cut -d ' ' -f1)"
-                  aab_url="https://github.com/RelayId/watch/releases/download/wear-latest/relayid-wear-v${version_name}-${version_code}.aab"
+                  aab_digest="$(sha256sum relayid-wear.aab | cut -d ' ' -f1)"
                   jq -n \
                     --arg package 'com.relayid.watch' \
                     --arg versionName "$version_name" \
@@ -175,7 +171,7 @@ jobs:
                     --arg downloadUrl 'https://relayid.github.io/manifest/wear/' \
                     --arg artifactUrl 'https://github.com/RelayId/watch/releases/download/wear-latest/relayid-wear.apk' \
                     --arg sha256 "$digest" \
-                    --arg aabUrl "$aab_url" \
+                    --arg aabUrl 'https://github.com/RelayId/watch/releases/download/wear-latest/relayid-wear.aab' \
                     --arg aabSha256 "$aab_digest" \
                     '{event_type:"publish-wear",client_payload:{package:$package,versionName:$versionName,versionCode:$versionCode,downloadUrl:$downloadUrl,artifactUrl:$artifactUrl,sha256:$sha256,artifacts:[{format:"apk",artifactUrl:$artifactUrl,sha256:$sha256},{format:"aab",artifactUrl:$aabUrl,sha256:$aabSha256}]}}' |
                     gh api repos/RelayId/manifest/dispatches --input -
