@@ -15,6 +15,7 @@ data class WatchState(
     val code: String? = null,
     val codeGroups: Int = 2,
     val expiresInSeconds: Int? = null,
+    val errorMessage: String? = null,
 ) {
     companion object
 }
@@ -44,6 +45,7 @@ fun WatchState.Companion.fromPayload(payload: String): WatchState? {
             code = root.optString("code").takeIf { it.isNotBlank() },
             codeGroups = root.optInt("groups", 2),
             expiresInSeconds = root.optInt("expires_in", -1).takeIf { it >= 0 },
+            errorMessage = root.optString("error").takeIf { it.isNotBlank() },
         )
     }.getOrNull()
 }

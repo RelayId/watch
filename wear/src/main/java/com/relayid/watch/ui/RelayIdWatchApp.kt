@@ -82,6 +82,8 @@ private val LightPalette = WatchPalette(
     logo = R.drawable.logo_dark,
 )
 
+private val ErrorColor = Color(0xFFFCA5A5)
+
 @Composable
 fun RelayIdWatchApp(
     state: WatchState,
@@ -147,6 +149,26 @@ fun RelayIdWatchApp(
                         palette = palette,
                     )
                 }
+                state.errorMessage?.let { message ->
+                    item {
+                        Card(
+                            onClick = onRequestCode,
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = palette.surface,
+                                contentColor = ErrorColor,
+                            ),
+                        ) {
+                            Text(
+                                text = message,
+                                modifier = Modifier.fillMaxWidth(),
+                                color = ErrorColor,
+                                fontSize = 11.sp,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
                 item {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -196,7 +218,7 @@ private fun Header(palette: WatchPalette) {
             ),
             contentDescription = "RelayId",
             modifier = Modifier
-                .height(28.dp)
+                .height(32.dp)
                 .clip(CircleShape),
         )
 
@@ -224,7 +246,7 @@ private fun RelayPicker(
     ) {
         if (relays.isEmpty()) {
             Text(
-                text = "Unlock RelayId on your phone..",
+                text = "Unlock RelayId on your phone",
                 color = palette.muted,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center,
@@ -253,7 +275,7 @@ private fun RelayPicker(
                         Text(
                             text = relay.email,
                             color = palette.text,
-                            fontSize = 14.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                         )
                         RelayDetail(text = relay.host, palette = palette)
@@ -283,10 +305,10 @@ private fun CodeHeader(relay: RelayChoice, palette: WatchPalette) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = relay.name,
+            text = relay.email,
             color = palette.text,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
         )
 
         Text(text = relay.host, color = palette.muted, fontSize = 11.sp)

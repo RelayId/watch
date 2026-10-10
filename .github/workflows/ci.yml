@@ -106,7 +106,7 @@ jobs:
             - name: Build release APK and AAB
               run: gradle :wear:assembleRelease :wear:bundleRelease --no-daemon --stacktrace
               env:
-                  RELAYID_REQUIRE_SIGNING: true
+                  RELAYID_REQUIRE_SIGNING: ${{ github.event_name != 'pull_request' && 'true' || 'false' }}
                   CXXFLAGS: -Wno-deprecated-declarations -Wno-overloaded-virtual
 
             - name: Name release APK and AAB
@@ -162,7 +162,7 @@ jobs:
                   digest="$(sha256sum relayid-wear.apk | cut -d ' ' -f1)"
                   aab_digest="$(sha256sum relayid-wear.aab | cut -d ' ' -f1)"
                   jq -n \
-                    --arg package 'com.relayid.watch' \
+                    --arg package 'com.relayid.app' \
                     --arg versionName "$version_name" \
                     --argjson versionCode "$version_code" \
                     --arg downloadUrl 'https://relayid.github.io/manifest/wear/' \

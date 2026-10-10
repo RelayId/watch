@@ -9,10 +9,10 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.relayid.watch"
+        applicationId = "com.relayid.app"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0.0"
     }
 
@@ -27,11 +27,30 @@ android {
         releaseKeyPassword,
     ).all { !it.isNullOrBlank() }
 
+    val debugKeystorePath = System.getenv("RELAYID_ANDROID_DEBUG_KEYSTORE_PATH")
+    val debugKeystorePassword = System.getenv("RELAYID_ANDROID_DEBUG_KEYSTORE_PASSWORD")
+    val debugKeyAlias = System.getenv("RELAYID_ANDROID_DEBUG_KEY_ALIAS")
+    val debugKeyPassword = System.getenv("RELAYID_ANDROID_DEBUG_KEY_PASSWORD")
+    val debugSigningConfigured = listOf(
+        debugKeystorePath,
+        debugKeystorePassword,
+        debugKeyAlias,
+        debugKeyPassword,
+    ).all { !it.isNullOrBlank() }
+
     if (System.getenv("RELAYID_REQUIRE_SIGNING") == "true" && !releaseSigningConfigured) {
         error("RelayId release signing requires the Android keystore environment variables.")
     }
 
     signingConfigs {
+        if (debugSigningConfigured) {
+            create("sharedDebug") {
+                storeFile = file(debugKeystorePath!!)
+                storePassword = debugKeystorePassword
+                keyAlias = debugKeyAlias
+                keyPassword = debugKeyPassword
+            }
+        }
         if (releaseSigningConfigured) {
             create("release") {
                 storeFile = file(releaseKeystorePath!!)
@@ -55,6 +74,9 @@ android {
         release {
             isMinifyEnabled = false
             if (releaseSigningConfigured) signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            if (debugSigningConfigured) signingConfig = signingConfigs.getByName("sharedDebug")
         }
     }
 

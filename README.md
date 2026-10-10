@@ -17,7 +17,7 @@ The watch application provides:
 - a circular Wear OS layout;
 - no watch authentication prompt.
 
-The phone publishes enrolled account metadata and a scoped watch capability to the watch. When the user selects an account or requests a new code, the watch sends a request to the phone. The phone's native Wear listener uses the capability to call Relay's code-only watch endpoint and publishes the resulting code, group count, and expiry back to the watch.
+The phone publishes enrolled account metadata to the watch. When the user selects an account or requests a new code, the watch sends a request to the phone. The phone's native Wear listener uses a phone-side scoped capability to call Relay's code-only watch endpoint and sends the resulting code, group count, and expiry only to the requesting watch.
 
 ## Security boundary
 
@@ -29,7 +29,7 @@ The watch does not store or receive:
 - OAuth tokens;
 - provider client secrets.
 
-The watch receives account display metadata, a scoped code-generation capability, and short-lived code results only. The capability cannot approve logins, enroll a provider, or call normal device endpoints. Pairing and capability registration require the phone to be unlocked once. After that, the phone UI can be locked while its native Wear listener handles code requests; the phone must remain powered, paired, and able to reach Relay.
+The watch receives account display metadata and short-lived code results only. The capability cannot approve logins, enroll a provider, or call normal device endpoints, and it never leaves the phone. Capability registration requires the phone to be unlocked once. After that, the phone UI can be locked while its native Wear listener handles code requests; the phone must remain powered, paired, and able to reach Relay.
 
 ## Project layout
 
@@ -61,7 +61,7 @@ gradle :wear:assembleRelease --no-daemon
 gradle :wear:lint --no-daemon
 ```
 
-The application ID is `com.relayid.watch`. The release output is written to `wear/build/outputs/apk/release/`.
+The application ID is `com.relayid.app`. The release output is written to `wear/build/outputs/apk/release/`.
 
 The generated Gradle directories and APKs are local build output and are excluded from version control. No signing key is included in this repository; production signing must be configured by the distribution environment.
 
