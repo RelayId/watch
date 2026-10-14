@@ -49,7 +49,7 @@ jobs:
                   test -f wear/src/main/AndroidManifest.xml
                   test -f wear/src/main/res/drawable-nodpi/relayid.png
                   ! find . -type f \( -name '*.jks' -o -name '*.keystore' \) -print -quit | grep -q .
-                  version_code="${RELAYID_ANDROID_VERSION_CODE:-$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' wear/build.gradle.kts | head -n1)}"
+                  version_code="${RELAYID_ANDROID_VERSION_CODE:-2}"
                   test -n "$version_code"
                   test "$version_code" -ge 1 -a "$version_code" -le 2100000000
                   test $((version_code % 2)) -eq 0
@@ -138,7 +138,7 @@ jobs:
               run: |
                   set -euo pipefail
                   version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -n1)"
-                  version_code="${RELAYID_ANDROID_VERSION_CODE:-$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' wear/build.gradle.kts | head -n1)}"
+                  version_code="${RELAYID_ANDROID_VERSION_CODE:-2}"
                   base="relayid-wear-v${version_name}-${version_code}"
                   apk_path="$(find wear/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
                   test -n "$apk_path"
@@ -182,7 +182,7 @@ jobs:
               run: |
                   set -euo pipefail
                   version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -n1)"
-                  version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' wear/build.gradle.kts | head -n1)"
+                  version_code="${RELAYID_ANDROID_VERSION_CODE:-2}"
                   digest="$(sha256sum relayid-wear.apk | cut -d ' ' -f1)"
                   aab_digest="$(sha256sum relayid-wear.aab | cut -d ' ' -f1)"
                   jq -n \
