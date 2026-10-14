@@ -67,7 +67,7 @@ The generated Gradle directories and APKs are local build output and are exclude
 
 ## Installation and pairing
 
-Install the debug APK on a Wear OS emulator or device after the phone application is installed and paired with the watch. Open RelayId on the phone, unlock it, and wait for the enrolled accounts to appear in the watch selector. The phone application must remain available when a code is requested because it performs the protected Relay request.
+Install RelayId Watch from the Google Play listing after pairing the watch with the phone application. Open RelayId on the phone, unlock it once, and wait for the enrolled accounts to appear in the watch selector. The phone application must remain available when a code is requested because it performs the protected Relay request.
 
 The watch application is not a replacement for the phone application. Enrollment, Relay setup, provider login, approval, credential storage, and account management remain phone functions.
 
