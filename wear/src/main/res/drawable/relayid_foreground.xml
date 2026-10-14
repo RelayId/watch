@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Explicitly scale the large source canvas for the adaptive-icon foreground. -->
-<scale xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/relayid"
-    android:gravity="center"
-    android:scaleWidth="58%"
-    android:scaleHeight="58%"
-    android:useIntrinsicSizeAsMinimum="false" />
