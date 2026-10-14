@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
@@ -88,8 +87,6 @@ private val ErrorColor = Color(0xFFFCA5A5)
 @Composable
 fun RelayIdWatchApp(
     state: WatchState,
-    demoMode: Boolean,
-    onDemoTap: () -> Unit,
     onSelectRelay: (RelayChoice?) -> Unit,
     onRequestCode: () -> Unit,
 ) {
@@ -128,7 +125,7 @@ fun RelayIdWatchApp(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             item {
-                Header(palette, onDemoTap)
+                Header(palette)
             }
 
             if (state.selectedRelay == null) {
@@ -210,9 +207,8 @@ fun RelayIdWatchApp(
 }
 
 @Composable
-private fun Header(palette: WatchPalette, onDemoTap: () -> Unit) {
+private fun Header(palette: WatchPalette) {
     Row(
-        modifier = Modifier.clickable(onClick = onDemoTap),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {

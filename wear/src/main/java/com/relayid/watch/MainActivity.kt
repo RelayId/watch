@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.DisposableEffect
@@ -16,13 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.relayid.watch.ui.RelayIdWatchApp
 import kotlinx.coroutines.delay
-
-private val demoRelay = RelayChoice(
-    id = "demo-relay",
-    name = "RelayId demo",
-    email = "demo@example.com",
-    host = "relay.example.com",
-)
 
 class MainActivity : ComponentActivity() {
 
@@ -39,8 +31,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             var state by remember { mutableStateOf(WearTransport.readState(context) ?: WatchState()) }
-            var demoMode by remember { mutableStateOf(false) }
-            var demoTapCount by remember { mutableStateOf(0) }
 
             DisposableEffect(context) {
                 val listener = WearTransport.listen(context) { incoming -> state = incoming }
@@ -67,17 +57,13 @@ class MainActivity : ComponentActivity() {
             // Request a fresh code whenever an explicitly selected relay enters
             // the code screen, including after the watch app is reopened.
             LaunchedEffect(state.selectedRelay?.id) {
-                if (!demoMode) state.selectedRelay?.let { WearTransport.requestCode(context, it.id) }
+                state.selectedRelay?.let { WearTransport.requestCode(context, it.id) }
             }
 
             LaunchedEffect(state.selectedRelay?.id, state.code, state.expiresInSeconds) {
                 val expiresInSeconds = state.expiresInSeconds ?: return@LaunchedEffect
                 if (expiresInSeconds <= 0) {
-                    if (demoMode) {
-                        state = state.copy(code = "1234-5678", codeGroups = 2, expiresInSeconds = 60, errorMessage = null)
-                    } else {
-                        state.selectedRelay?.let { WearTransport.requestCode(context, it.id) }
-                    }
+                    state.selectedRelay?.let { WearTransport.requestCode(context, it.id) }
                     return@LaunchedEffect
                 }
 
@@ -87,30 +73,7 @@ class MainActivity : ComponentActivity() {
 
             RelayIdWatchApp(
                 state = state,
-                demoMode = demoMode,
-                onDemoTap = {
-                    demoTapCount += 1
-                    if (demoTapCount >= 5) {
-                        demoTapCount = 0
-                        demoMode = !demoMode
-                        Toast.makeText(
-                            context,
-                            if (demoMode) "Demo mode enabled" else "Demo mode disabled",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                        state = if (!demoMode) {
-                            WearTransport.setSelectedRelay(context, null)
-                            WearTransport.readState(context) ?: WatchState()
-                        } else {
-                            state.copy(selectedRelay = demoRelay, code = "1234-5678", codeGroups = 2, expiresInSeconds = 60, errorMessage = null)
-                        }
-                    }
-                },
                 onSelectRelay = { relay ->
-                    if (demoMode && relay == null) {
-                        demoMode = false
-                        demoTapCount = 0
-                    }
                     state = state.copy(
                         selectedRelay = relay,
                         code = null,
@@ -121,11 +84,7 @@ class MainActivity : ComponentActivity() {
                 },
                 onRequestCode = {
                     state = state.copy(errorMessage = null)
-                    if (demoMode) {
-                        state = state.copy(code = "1234-5678", codeGroups = 2, expiresInSeconds = 60)
-                    } else {
-                        state.selectedRelay?.let { WearTransport.requestCode(context, it.id) }
-                    }
+                    state.selectedRelay?.let { WearTransport.requestCode(context, it.id) }
                 },
             )
         }
