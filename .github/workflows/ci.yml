@@ -49,6 +49,10 @@ jobs:
                   test -f wear/src/main/AndroidManifest.xml
                   test -f wear/src/main/res/drawable-nodpi/relayid.png
                   ! find . -type f \( -name '*.jks' -o -name '*.keystore' \) -print -quit | grep -q .
+                  version_code="$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' wear/build.gradle.kts | head -n1)"
+                  test -n "$version_code"
+                  test "$version_code" -ge 1 -a "$version_code" -le 2100000000
+                  test $((version_code % 2)) -eq 0
                   git diff --check
 
     wear-prerelease:
