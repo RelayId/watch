@@ -119,12 +119,7 @@ jobs:
                   else
                       baseline=2
                   fi
-                  run_version="$((GITHUB_RUN_NUMBER * 2))"
-                  if (( run_version > baseline )); then
-                      next="$run_version"
-                  else
-                      next="$baseline"
-                  fi
+                  next="$baseline"
                   echo "RELAYID_ANDROID_VERSION_CODE=$next" >> "$GITHUB_ENV"
 
             - name: Build release APK and AAB
@@ -179,6 +174,12 @@ jobs:
                   done < <(gh release view wear-latest --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep '^relayid-wear' || true)
                   assets=(relayid-wear.apk relayid-wear.aab)
                   gh release upload wear-latest "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+
+            - name: Persist allocated Wear version code
+              if: github.event_name != 'pull_request'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: gh variable set RELAYID_VERSION_CODE --repo "$GITHUB_REPOSITORY" --body "$RELAYID_ANDROID_VERSION_CODE"
 
             - name: Publish update manifest metadata
               if: github.event_name != 'pull_request' && env.MANIFEST_DISPATCH_TOKEN != ''
