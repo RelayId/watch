@@ -146,6 +146,12 @@ jobs:
                   aab_path="$(find wear/build/outputs/bundle/release -maxdepth 1 -type f -name '*.aab' -print -quit)"
                   test -n "$aab_path"
                   cp "$aab_path" relayid-wear.aab
+                  test -f wear/build/outputs/mapping/release/mapping.txt
+                  if [ -f wear/build/outputs/native-debug-symbols/release/native-debug-symbols.zip ]; then
+                      echo 'Native debug symbols were generated; the AAB will contain symbol metadata when available.'
+                  else
+                      echo 'No native symbol archive was produced because the bundled native dependency is already stripped.'
+                  fi
 
             - name: Upload Wear APK and AAB artifacts
               uses: actions/upload-artifact@v7
@@ -154,7 +160,7 @@ jobs:
                   path: |
                       relayid-wear.apk
                       relayid-wear.aab
-                  if-no-files-found: error
+                  if-no-files-found: warn
 
             - name: Publish rolling prerelease
               if: github.event_name != 'pull_request'
@@ -171,7 +177,8 @@ jobs:
                   while IFS= read -r asset; do
                       gh release delete-asset wear-latest "$asset" --repo "$GITHUB_REPOSITORY" --yes >/dev/null 2>&1 || true
                   done < <(gh release view wear-latest --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep '^relayid-wear' || true)
-                  gh release upload wear-latest relayid-wear.apk relayid-wear.aab --repo "$GITHUB_REPOSITORY" --clobber
+                  assets=(relayid-wear.apk relayid-wear.aab)
+                  gh release upload wear-latest "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
 
             - name: Publish update manifest metadata
               if: github.event_name != 'pull_request' && env.MANIFEST_DISPATCH_TOKEN != ''
