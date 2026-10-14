@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.DisposableEffect
@@ -73,7 +74,7 @@ class MainActivity : ComponentActivity() {
                 val expiresInSeconds = state.expiresInSeconds ?: return@LaunchedEffect
                 if (expiresInSeconds <= 0) {
                     if (demoMode) {
-                        state = state.copy(code = "1234-5678-9012", codeGroups = 3, expiresInSeconds = 60, errorMessage = null)
+                        state = state.copy(code = "1234-5678", codeGroups = 2, expiresInSeconds = 60, errorMessage = null)
                     } else {
                         state.selectedRelay?.let { WearTransport.requestCode(context, it.id) }
                     }
@@ -92,11 +93,16 @@ class MainActivity : ComponentActivity() {
                     if (demoTapCount >= 5) {
                         demoTapCount = 0
                         demoMode = !demoMode
+                        Toast.makeText(
+                            context,
+                            if (demoMode) "Demo mode enabled" else "Demo mode disabled",
+                            Toast.LENGTH_SHORT,
+                        ).show()
                         state = if (!demoMode) {
                             WearTransport.setSelectedRelay(context, null)
                             WearTransport.readState(context) ?: WatchState()
                         } else {
-                            state.copy(selectedRelay = demoRelay, code = "1234-5678-9012", codeGroups = 3, expiresInSeconds = 60, errorMessage = null)
+                            state.copy(selectedRelay = demoRelay, code = "1234-5678", codeGroups = 2, expiresInSeconds = 60, errorMessage = null)
                         }
                     }
                 },
@@ -116,7 +122,7 @@ class MainActivity : ComponentActivity() {
                 onRequestCode = {
                     state = state.copy(errorMessage = null)
                     if (demoMode) {
-                        state = state.copy(code = "1234-5678-9012", codeGroups = 3, expiresInSeconds = 60)
+                        state = state.copy(code = "1234-5678", codeGroups = 2, expiresInSeconds = 60)
                     } else {
                         state.selectedRelay?.let { WearTransport.requestCode(context, it.id) }
                     }
