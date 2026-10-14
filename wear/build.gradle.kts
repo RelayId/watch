@@ -12,7 +12,7 @@ android {
         applicationId = "com.relayid.app"
         minSdk = 30
         targetSdk = 36
-        versionCode = 2
+        versionCode = System.getenv("RELAYID_ANDROID_VERSION_CODE")?.toIntOrNull() ?: 2
         versionName = "1.0.0"
     }
 
