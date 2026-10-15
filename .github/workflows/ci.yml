@@ -108,27 +108,21 @@ jobs:
                       echo "RELAYID_REQUIRE_SIGNING=true"
                   } >> "$GITHUB_ENV"
 
-            - name: Allocate monotonic Wear version code
+            - name: Allocate Wear version code
               if: github.event_name != 'pull_request'
               shell: bash
               run: |
                   set -euo pipefail
                   current='${{ vars.RELAYID_VERSION_CODE }}'
-                  run_number='${{ github.run_number }}'
                   if [[ "$current" =~ ^[0-9]+$ ]]; then
                       baseline="$((current + 2))"
                   else
                       baseline=2
                   fi
-                  if [[ "$run_number" =~ ^[0-9]+$ ]]; then
-                      candidate="$((run_number * 2))"
-                  else
-                      candidate=2
-                  fi
-                  next="$((candidate > baseline ? candidate : baseline))"
+                  next="$baseline"
                   test "$next" -ge 1 -a "$next" -le 2100000000
                   test $((next % 2)) -eq 0
-                  echo "Allocating Wear version code $next (repository floor $baseline, workflow run $run_number)."
+                  echo "Allocating Wear version code $next."
                   echo "RELAYID_ANDROID_VERSION_CODE=$next" >> "$GITHUB_ENV"
 
             - name: Build release APK and AAB
@@ -183,6 +177,16 @@ jobs:
                   done < <(gh release view wear-latest --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep '^relayid-wear' || true)
                   assets=(relayid-wear.apk relayid-wear.aab)
                   gh release upload wear-latest "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+
+            - name: Persist Wear version code
+              if: github.event_name != 'pull_request'
+              env:
+                  GH_TOKEN: ${{ secrets.MANIFEST_DISPATCH_TOKEN }}
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  test -n "$GH_TOKEN"
+                  gh variable set RELAYID_VERSION_CODE --repo "$GITHUB_REPOSITORY" --body "$RELAYID_ANDROID_VERSION_CODE"
 
             - name: Publish update manifest metadata
               if: github.event_name != 'pull_request' && env.MANIFEST_DISPATCH_TOKEN != ''
